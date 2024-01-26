@@ -1,4 +1,4 @@
-use  std::io::BufWriter;
+use  std::io::{BufWriter, Write};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use needletail::{parse_fastx_file, Sequence, FastxReader};
@@ -45,15 +45,32 @@ fn sanitze(filename: &str, output_base: &str) {
 
     while let Some(record) = reader.next() {
         let record = record.expect("Invalid record");
-        let seq = record.seq();
+        let seq = record.normalize(true);
         let id = from_utf8(record.id()).unwrap();
-        let new_id = format!("{}", record_number);
-        
-        id_translation.push((id.to_string(), new_id.to_string()));
+        let new_id = format!("c{}", record_number);
 
+        // Split id at first space or "|"
+        let id = id.split(|c| c == ' ' || c == '|').next().unwrap();
         
-        
+        id_translation.push((new_id.to_string(), id.to_string()));
+
+        output_fasta.write(format!(">seq{}\n", new_id).as_bytes()).expect("Unable to write data");
+        output_fasta.write_all(&seq).expect("Unable to write data");
+        output_fasta.write(b"\n").expect("Unable to write data");
+
+        record_number += 1;
     }
 
+    // Check for duplicates of the normal ids
+    let mut id_translation_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for (id, new_id) in id_translation.clone() {
+        if id_translation_map.contains_key(&id) {
+            panic!("Duplicate id: {}", id);           
+        }
+        id_translation_map.insert(id, new_id);
+    }
 
+    for (id, new_id) in id_translation {
+        output_translation_table.write(format!("{}\t{}\n", id, new_id).as_bytes()).expect("Unable to write data");
+    }
 }
