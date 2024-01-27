@@ -16,6 +16,7 @@ struct Cli {
 enum Commands {
     /// Adds files to myapp
     Sanitize { filename: String, output_base: String },
+    Chunk { filename: String, chunk_size: u64 }
 }
 
 fn main() {
@@ -26,6 +27,9 @@ fn main() {
     match &cli.command {
         Commands::Sanitize { filename , output_base} => {
             sanitze(filename, output_base);
+        },
+        Commands::Chunk { filename, chunk_size } => {
+            chunk(filename, chunk_size);
         }
     }
 }
@@ -72,5 +76,32 @@ fn sanitze(filename: &str, output_base: &str) {
 
     for (id, new_id) in id_translation {
         output_translation_table.write(format!("{}\t{}\n", id, new_id).as_bytes()).expect("Unable to write data");
+    }
+}
+
+fn chunk(filename: &str, chunk_size: &u64) {
+    let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
+
+    let mut record_number = 0;
+    let mut chunk_number = 0;
+
+    let mut output_fasta = std::fs::File::create(format!("{}.chunk{}.fasta", filename, chunk_number)).expect("Unable to create file");
+    let mut output_fasta = BufWriter::new(output_fasta);
+
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.normalize(true);
+        let id = from_utf8(record.id()).unwrap();
+
+        if record_number % chunk_size == 0 {
+            output_fasta = BufWriter::new(std::fs::File::create(format!("{}.chunk{}.fasta", filename, chunk_number)).expect("Unable to create file"));
+            chunk_number += 1;
+        }
+
+        output_fasta.write(format!(">{}_{}\n", id, record_number).as_bytes()).expect("Unable to write data");
+        output_fasta.write_all(&seq).expect("Unable to write data");
+        output_fasta.write(b"\n").expect("Unable to write data");
+
+        record_number += 1;
     }
 }
