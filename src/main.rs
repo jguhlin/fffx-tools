@@ -90,7 +90,7 @@ fn chunk(filename: &str, chunk_size: &u64) {
 
     while let Some(record) = reader.next() {
         let record = record.expect("Invalid record");
-        let seq = record.normalize(true);
+        let seq = record.normalize(false);
         let id = from_utf8(record.id()).unwrap();
 
         if record_number % chunk_size == 0 {
