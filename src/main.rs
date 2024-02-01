@@ -49,7 +49,7 @@ fn sanitze(filename: &str, output_base: &str) {
 
     while let Some(record) = reader.next() {
         let record = record.expect("Invalid record");
-        let seq = record.normalize(true);
+        let seq = record.normalize(false);
         let id = from_utf8(record.id()).unwrap();
         let new_id = format!("c{}", record_number);
 
