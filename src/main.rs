@@ -16,7 +16,8 @@ struct Cli {
 enum Commands {
     /// Adds files to myapp
     Sanitize { filename: String, output_base: String },
-    Chunk { filename: String, chunk_size: u64 }
+    Chunk { filename: String, chunk_size: u64 },
+    LengthFilter { filename: String, output: String, min_length: Option<u64>, max_length: Option<u64> },
 }
 
 fn main() {
@@ -30,6 +31,9 @@ fn main() {
         },
         Commands::Chunk { filename, chunk_size } => {
             chunk(filename, chunk_size);
+        },
+        Commands::LengthFilter { filename, output, min_length, max_length } => {
+            length_filter(filename, output, min_length, max_length);
         }
     }
 }
@@ -76,6 +80,35 @@ fn sanitze(filename: &str, output_base: &str) {
 
     for (id, new_id) in id_translation {
         output_translation_table.write(format!("{}\t{}\n", id, new_id).as_bytes()).expect("Unable to write data");
+    }
+}
+
+fn length_filter(filename: &str, output: &str, min_length: &Option<u64>, max_length: &Option<u64>) {
+    let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
+
+    let mut output_fasta = std::fs::File::create(format!("{}", output)).expect("Unable to create file");
+    let mut output_fasta = BufWriter::new(output_fasta);
+
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.normalize(false);
+        let id = from_utf8(record.id()).unwrap();
+
+        if let Some(min_length) = min_length {
+            if seq.len() < *min_length as usize {
+                continue;
+            }
+        }
+
+        if let Some(max_length) = max_length {
+            if seq.len() > *max_length as usize {
+                continue;
+            }
+        }
+
+        output_fasta.write(format!(">{}\n", id).as_bytes()).expect("Unable to write data");
+        output_fasta.write_all(&seq).expect("Unable to write data");
+        output_fasta.write(b"\n").expect("Unable to write data");
     }
 }
 
