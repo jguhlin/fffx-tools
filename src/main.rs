@@ -18,6 +18,9 @@ enum Commands {
     Sanitize { filename: String, output_base: String },
     Chunk { filename: String, chunk_size: u64 },
     LengthFilter { filename: String, output: String, min_length: Option<u64>, max_length: Option<u64> },
+
+    #[command(about = "Renumbers the sequences in a fasta file - No translation table is provided. Useful for dealing with duplicates.")]
+    Renumber { filename: String, output: String},
 }
 
 fn main() {
@@ -34,6 +37,9 @@ fn main() {
         },
         Commands::LengthFilter { filename, output, min_length, max_length } => {
             length_filter(filename, output, min_length, max_length);
+        },
+        Commands::Renumber { filename, output } => {
+            renumber(filename, output);
         }
     }
 }
@@ -81,6 +87,30 @@ fn sanitze(filename: &str, output_base: &str) {
     for (id, new_id) in id_translation {
         output_translation_table.write(format!("{}\t{}\n", id, new_id).as_bytes()).expect("Unable to write data");
     }
+}
+
+
+fn renumber(filename: &str, output: &str) {
+    let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
+
+    let output_fasta = std::fs::File::create(format!("{}", &output)).expect("Unable to create file");
+    let mut output_fasta = BufWriter::new(output_fasta);
+
+    let mut record_number = 0;
+
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.normalize(false);
+        let id = from_utf8(record.id()).unwrap();
+        let new_id = format!("c{}", record_number);
+
+        output_fasta.write(format!(">seq{}\n", new_id).as_bytes()).expect("Unable to write data");
+        output_fasta.write_all(&seq).expect("Unable to write data");
+        output_fasta.write(b"\n").expect("Unable to write data");
+
+        record_number += 1;
+    }
+
 }
 
 fn length_filter(filename: &str, output: &str, min_length: &Option<u64>, max_length: &Option<u64>) {
