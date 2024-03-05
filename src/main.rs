@@ -1,4 +1,4 @@
-use  std::io::{BufWriter, Write};
+use  std::io::{BufWriter, Write, BufRead};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use needletail::{parse_fastx_file, Sequence, FastxReader};
@@ -18,6 +18,8 @@ enum Commands {
     Sanitize { filename: String, output_base: String },
     Chunk { filename: String, chunk_size: u64 },
     LengthFilter { filename: String, output: String, min_length: Option<u64>, max_length: Option<u64> },
+    #[command(about = "Removes sequences by matching IDs found in a keyfile. Useful for fast filtering of files.")]
+    RemoveByIdKeyfile { filename: String, output: String, ids: String },
 
     #[command(about = "Renumbers the sequences in a fasta file - No translation table is provided. Useful for dealing with duplicates.")]
     Renumber { filename: String, output: String},
@@ -40,7 +42,42 @@ fn main() {
         },
         Commands::Renumber { filename, output } => {
             renumber(filename, output);
+        },
+        Commands::RemoveByIdKeyfile { filename, output, ids } => {
+            remove_by_id_keyfile(filename, output, ids);
         }
+    }
+}
+
+fn remove_by_id_keyfile(filename: &str, output: &str, keyfile: &str) {
+    let mut reader = std::fs::File::open(keyfile).expect("Unable to open keyfile");
+    let mut reader = std::io::BufReader::new(reader);
+    // Keyfiles should be one ID per line
+    let mut ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for line in reader.lines() {
+        let line = line.expect("Unable to read line");
+        // Clear any whitespace
+        let line = line.trim();
+        ids.insert(line.to_string());
+    }
+
+    let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
+
+    let mut output_fasta = std::fs::File::create(format!("{}", output)).expect("Unable to create file");
+    let mut output_fasta = BufWriter::new(output_fasta);
+
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.normalize(false);
+        let id = from_utf8(record.id()).unwrap();
+
+        if ids.contains(id) {
+            continue;
+        }
+
+        output_fasta.write(format!(">{}\n", id).as_bytes()).expect("Unable to write data");
+        output_fasta.write_all(&seq).expect("Unable to write data");
+        output_fasta.write(b"\n").expect("Unable to write data");
     }
 }
 
