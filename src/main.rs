@@ -68,7 +68,7 @@ fn remove_by_id_keyfile(filename: &str, output: &str, keyfile: &str) {
 
     while let Some(record) = reader.next() {
         let record = record.expect("Invalid record");
-        let seq = record.normalize(false);
+        let seq = record.seq();
         let id = from_utf8(record.id()).unwrap();
 
         if ids.contains(id) {
