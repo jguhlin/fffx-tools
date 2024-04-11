@@ -14,10 +14,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Adds files to myapp
+    #[command(about = "Sanitizes a fasta file. Removes all non-standard characters from the sequence and renumbers the sequences.")]
     Sanitize { filename: String, output_base: String },
+
+    #[command(about = "Chunks a fasta file into smaller files. Useful for parallel processing.")]
     Chunk { filename: String, chunk_size: u64 },
+
+    #[command(about = "Filters sequences by length. Can be used to filter out short or long sequences.")]
     LengthFilter { filename: String, output: String, min_length: Option<u64>, max_length: Option<u64> },
+
     #[command(about = "Removes sequences by matching IDs found in a keyfile. Useful for fast filtering of files.")]
     RemoveByIdKeyfile { filename: String, output: String, ids: String },
 
