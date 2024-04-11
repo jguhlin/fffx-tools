@@ -23,6 +23,9 @@ enum Commands {
 
     #[command(about = "Renumbers the sequences in a fasta file - No translation table is provided. Useful for dealing with duplicates.")]
     Renumber { filename: String, output: String},
+
+    #[command(about = "Removes sequences by matching landmarks (scaffold, contigs, etc) in the sequence. Useful for removing multiple sequences at once.")]
+    Remove { filename: String, landmarks: Vec<String> }
 }
 
 fn main() {
@@ -46,6 +49,38 @@ fn main() {
         Commands::RemoveByIdKeyfile { filename, output, ids } => {
             remove_by_id_keyfile(filename, output, ids);
         }
+        Commands::Remove { filename, landmarks } => {
+            remove_by_landmarks(filename, landmarks);
+        }
+    }
+}
+
+// Output to stdout
+fn remove_by_landmarks(filename: &str, landmarks: &Vec<String>) {
+    let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
+
+    let mut output_fasta = std::io::stdout();
+
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.normalize(false);
+        let id = from_utf8(record.id()).unwrap();
+
+        let mut skip = false;
+        for landmark in landmarks {
+            if id.contains(landmark) {
+                skip = true;
+                break;
+            }
+        }
+
+        if skip {
+            continue;
+        }
+
+        output_fasta.write(format!(">{}\n", id).as_bytes()).expect("Unable to write data");
+        output_fasta.write_all(&seq).expect("Unable to write data");
+        output_fasta.write(b"\n").expect("Unable to write data");
     }
 }
 
