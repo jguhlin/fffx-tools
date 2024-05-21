@@ -116,7 +116,7 @@ fn remove_by_landmarks(filename: &str, landmarks: &Vec<String>) {
 
         let mut skip = false;
         for landmark in landmarks {
-            if id.contains(landmark) {
+            if id == *landmark {
                 skip = true;
                 break;
             }
