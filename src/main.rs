@@ -371,15 +371,15 @@ fn fastq_stats(filename: &str) {
     let total_length = lengths.iter().sum::<usize>();
     let total_reads = lengths.len();
 
-    let read_min = lengths.iter().min().unwrap();
-    let read_max = lengths.iter().max().unwrap();
+    let read_min = *lengths.iter().min().unwrap();
+    let read_max = *lengths.iter().max().unwrap();
 
     let mean = total_length as f64 / total_reads as f64;
     let median = lengths[lengths.len() / 2];
 
     // Stored as f64
-    let read_qual_min = average_read_qualities.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
-    let read_qual_max = average_read_qualities.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+    let read_qual_min = *average_read_qualities.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+    let read_qual_max = *average_read_qualities.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
     
     let quality_mean = average_read_qualities.iter().sum::<f64>() / average_read_qualities.len() as f64;
 
