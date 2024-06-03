@@ -56,6 +56,18 @@ enum Commands {
         filename: String,
         landmarks: Vec<String>,
     },
+    #[command(
+        about = "Compute FASTQ stats: number of reads, total length, GC content, N content, length distribution, mean, medium, s.d., of quality score."
+    )]
+    FastqStats {
+        filename: String,
+    },
+    #[command(
+        about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
+    )]
+    FastaStats {
+        filename: String,
+    },
 }
 
 fn main() {
@@ -99,6 +111,12 @@ fn main() {
             landmarks,
         } => {
             remove_by_landmarks(filename, landmarks);
+        }
+        Commands::FastqStats { filename } => {
+            fastq_stats(filename);
+        }
+        Commands::FastaStats { filename } => {
+            fasta_stats(filename);
         }
     }
 }
@@ -311,4 +329,196 @@ fn chunk(filename: &str, chunk_size: &u64) {
 
         record_number += 1;
     }
+}
+
+// about = "Compute FASTQ stats: number of reads, total length, GC content, N content, length distribution, mean, medium, s.d., of quality score."
+fn fastq_stats(filename: &str) {
+    let mut reader = FastxReader::from_path(&filename).expect("invalid path/file");
+
+    let mut total_length = 0;
+    let mut total_gc = 0;
+    let mut total_n = 0;
+    let mut total_reads = 0;
+    let mut length_distribution: std::collections::HashMap<usize, usize> =
+        std::collections::HashMap::new();
+    let mut quality_distribution: std::collections::HashMap<u8, usize> =
+        std::collections::HashMap::new();
+
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.seq();
+        let qual = record.qual();
+
+        total_reads += 1;
+        total_length += seq.len();
+
+        let mut gc = 0;
+        let mut n = 0;
+        for base in seq {
+            match base {
+                b'G' | b'C' => gc += 1,
+                b'N' => n += 1,
+                _ => (),
+            }
+        }
+
+        total_gc += gc;
+        total_n += n;
+
+        *length_distribution.entry(seq.len()).or_insert(0) += 1;
+
+        for q in qual {
+            *quality_distribution.entry(q).or_insert(0) += 1;
+        }
+    }
+
+    let mean = total_length as f64 / total_reads as f64;
+    let mut median = 0;
+    let mut median_count = 0;
+    let mut median_found = false;
+    for (length, count) in length_distribution.iter() {
+        median_count += count;
+        if median_count >= total_reads / 2 {
+            median = *length;
+            median_found = true;
+            break;
+        }
+    }
+
+    if !median_found {
+        panic!("Unable to find median");
+    }
+
+    let mut quality_sum = 0;
+    let mut quality_count = 0;
+    for (quality, count) in quality_distribution.iter() {
+        quality_sum += (*quality as usize) * count;
+        quality_count += count;
+    }
+
+    let quality_mean = quality_sum as f64 / quality_count as f64;
+
+    let mut quality_variance = 0;
+    for (quality, count) in quality_distribution.iter() {
+        quality_variance += (*quality as usize - quality_mean as usize).pow(2) * count;
+    }
+
+    let quality_sd = (quality_variance as f64 / quality_count as f64).sqrt();
+
+    println!("Total reads: {}", total_reads);
+    println!("Total length: {}", total_length);
+    println!("GC content: {}", total_gc as f64 / total_length as f64);
+    println!("N content: {}", total_n as f64 / total_length as f64);
+    println!("Length distribution: {:?}", length_distribution);
+    println!("Mean: {}", mean);
+    println!("Median: {}", median);
+    println!("Quality mean: {}", quality_mean);
+    println!("Quality median: {}", quality_distribution.len() / 2);
+    println!("Quality s.d.: {}", quality_sd);
+}
+
+// about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
+fn fasta_stats(filename: &str) {
+    let mut reader = FastxReader::from_path(&filename).expect("invalid path/file");
+
+    let mut total_length = 0;
+    let mut total_gc = 0;
+    let mut total_n = 0;
+    let mut total_reads = 0;
+    let mut length_distribution: std::collections::HashMap<usize, usize> =
+        std::collections::HashMap::new();
+    
+    // Calculate N50, N90, etc.
+    let mut lengths: Vec<usize> = Vec::new();
+
+    // Calculate Per contig and Per Scaffold stats
+    let mut contig_lengths: Vec<usize> = Vec::new();
+    let mut scaffold_lengths: Vec<usize> = Vec::new();
+    
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.seq();
+
+        total_reads += 1;
+        total_length += seq.len();
+
+        let mut gc = 0;
+        let mut n = 0;
+        for base in seq {
+            match base {
+                b'G' | b'C' => gc += 1,
+                b'N' => n += 1,
+                _ => (),
+            }
+        }
+
+        total_gc += gc;
+        total_n += n;
+
+        *length_distribution.entry(seq.len()).or_insert(0) += 1;
+
+        lengths.push(seq.len());
+
+        // Scaffolds have at least one gap that is represented by a N
+        // and that gap is 10bp long
+        // todo fix this
+        if seq.contains(&b'N') {
+            scaffold_lengths.push(seq.len());
+        } else {
+            contig_lengths.push(seq.len());
+        }
+    }
+
+    println!("Total reads: {}", total_reads);
+    println!("Total length: {}", total_length);
+    println!("GC content: {}", total_gc as f64 / total_length as f64);
+    println!("N content: {}", total_n as f64 / total_length as f64);
+    println!("Length distribution: {:?}", length_distribution);
+
+    // Calculate N50, N90, etc.
+    lengths.sort();
+    let mut total = 0;
+    let mut n50 = 0;
+    let mut n90 = 0;
+
+    for length in lengths.iter().rev() {
+        total += length;
+        if total >= total_length / 2 {
+            n50 = *length;
+            break;
+        }
+    }
+
+    total = 0;
+    for length in lengths.iter().rev() {
+        total += length;
+        if total >= total_length * 0.9 {
+            n90 = *length;
+            break;
+        }
+    }
+
+    println!("N50: {}", n50);
+    println!("N90: {}", n90);
+
+    // Calculate Per contig and Per Scaffold stats
+    let mut total_contig_length = 0;
+    let mut total_scaffold_length = 0;
+    for length in contig_lengths.iter() {
+        total_contig_length += length;
+    }
+
+    for length in scaffold_lengths.iter() {
+        total_scaffold_length += length;
+    }
+
+    let mean_contig_length = total_contig_length as f64 / contig_lengths.len() as f64;
+
+    let mean_scaffold_length = total_scaffold_length as f64 / scaffold_lengths.len() as f64;
+
+    println!("Mean contig length: {}", mean_contig_length);
+    println!("Mean scaffold length: {}", mean_scaffold_length);
+
+    
+
 }
