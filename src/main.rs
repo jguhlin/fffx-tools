@@ -333,7 +333,7 @@ fn chunk(filename: &str, chunk_size: &u64) {
 
 // about = "Compute FASTQ stats: number of reads, total length, GC content, N content, length distribution, mean, medium, s.d., of quality score."
 fn fastq_stats(filename: &str) {
-    let mut reader = FastxReader::from_path(&filename).expect("invalid path/file");
+    let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
 
     let mut total_length = 0;
     let mut total_gc = 0;
@@ -354,7 +354,7 @@ fn fastq_stats(filename: &str) {
 
         let mut gc = 0;
         let mut n = 0;
-        for base in seq {
+        for base in seq.iter() {
             match base {
                 b'G' | b'C' => gc += 1,
                 b'N' => n += 1,
@@ -368,7 +368,7 @@ fn fastq_stats(filename: &str) {
         *length_distribution.entry(seq.len()).or_insert(0) += 1;
 
         for q in qual {
-            *quality_distribution.entry(q).or_insert(0) += 1;
+            *quality_distribution.entry(q[0]).or_insert(0) += 1;
         }
     }
 
@@ -419,7 +419,7 @@ fn fastq_stats(filename: &str) {
 
 // about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
 fn fasta_stats(filename: &str) {
-    let mut reader = FastxReader::from_path(&filename).expect("invalid path/file");
+    let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
 
     let mut total_length = 0;
     let mut total_gc = 0;
@@ -444,7 +444,7 @@ fn fasta_stats(filename: &str) {
 
         let mut gc = 0;
         let mut n = 0;
-        for base in seq {
+        for base in seq.iter() {
             match base {
                 b'G' | b'C' => gc += 1,
                 b'N' => n += 1,
@@ -492,7 +492,7 @@ fn fasta_stats(filename: &str) {
     total = 0;
     for length in lengths.iter().rev() {
         total += length;
-        if total >= total_length * 0.9 {
+        if total >= (total_length as f64 * 0.9) as usize {
             n90 = *length;
             break;
         }
@@ -519,6 +519,6 @@ fn fasta_stats(filename: &str) {
     println!("Mean contig length: {}", mean_contig_length);
     println!("Mean scaffold length: {}", mean_scaffold_length);
 
-    
+
 
 }
