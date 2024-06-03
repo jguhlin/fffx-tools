@@ -338,7 +338,7 @@ fn fastq_stats(filename: &str) {
     let mut total_gc = 0;
     let mut total_n = 0;
     let mut lengths: Vec<usize> = Vec::new();
-    let mut average_read_qualities: Vec<u8> = Vec::new();
+    let mut average_read_qualities: Vec<f64> = Vec::new();
 
     while let Some(record) = reader.next() {
         let record = record.expect("Invalid record");
@@ -364,7 +364,7 @@ fn fastq_stats(filename: &str) {
             // Get average
             let total_qual = qual.iter().map(|&x| x as f64).sum::<f64>();
             let average_qual = (total_qual / qual.len() as f64) - 33.0;
-            average_read_qualities.push(average_qual as u8);
+            average_read_qualities.push(average_qual as f64);
         }
     }
 
@@ -377,10 +377,12 @@ fn fastq_stats(filename: &str) {
     let mean = total_length as f64 / total_reads as f64;
     let median = lengths[lengths.len() / 2];
 
-    let read_qual_min = average_read_qualities.iter().min().unwrap();
-    let read_qual_max = average_read_qualities.iter().max().unwrap();
+    // Stored as f64
+    let read_qual_min = average_read_qualities.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+    let read_qual_max = average_read_qualities.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+    
 
-    let quality_mean = average_read_qualities.iter().sum::<u8>() as f64 / average_read_qualities.len() as f64;
+    let quality_mean = average_read_qualities.iter().sum::<f64>() / average_read_qualities.len() as f64;
 
     println!("Total reads: {}", total_reads);
     println!("Total length: {}", total_length);
