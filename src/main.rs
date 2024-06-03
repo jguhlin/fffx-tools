@@ -335,22 +335,17 @@ fn chunk(filename: &str, chunk_size: &u64) {
 fn fastq_stats(filename: &str) {
     let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
 
-    let mut total_length = 0;
     let mut total_gc = 0;
     let mut total_n = 0;
-    let mut total_reads = 0;
-    let mut length_distribution: std::collections::HashMap<usize, usize> =
-        std::collections::HashMap::new();
-    let mut quality_distribution: std::collections::HashMap<u8, usize> =
-        std::collections::HashMap::new();
+    let mut lengths: Vec<usize> = Vec::new();
+    let mut average_read_qualities: Vec<u8> = Vec::new();
 
     while let Some(record) = reader.next() {
         let record = record.expect("Invalid record");
         let seq = record.seq();
         let qual = record.qual();
 
-        total_reads += 1;
-        total_length += seq.len();
+        lengths.push(seq.len());
 
         let mut gc = 0;
         let mut n = 0;
@@ -365,57 +360,39 @@ fn fastq_stats(filename: &str) {
         total_gc += gc;
         total_n += n;
 
-        *length_distribution.entry(seq.len()).or_insert(0) += 1;
-
         if let Some(qual) = qual {
-            for q in qual.iter() {
-                *quality_distribution.entry(*q - 33).or_insert(0) += 1;
-            }
+            // Get average
+            let total_qual = qual.iter().map(|x| (*x - 33) as f64).sum::<f64>();
+            let average_qual = total_qual / qual.len() as f64;
+            average_read_qualities.push(average_qual as u8);
         }
     }
+
+    let total_length = lengths.iter().sum::<usize>();
+    let total_reads = lengths.len();
+
+    let read_min = lengths.iter().min().unwrap();
+    let read_max = lengths.iter().max().unwrap();
 
     let mean = total_length as f64 / total_reads as f64;
-    let mut median = 0;
-    let mut median_count = 0;
-    let mut median_found = false;
-    for (length, count) in length_distribution.iter() {
-        median_count += count;
-        if median_count >= total_reads / 2 {
-            median = *length;
-            median_found = true;
-            break;
-        }
-    }
-
-    if !median_found {
-        panic!("Unable to find median");
-    }
+    let median = lengths[lengths.len() / 2];
 
     let mut quality_sum = 0;
     let mut quality_count = 0;
-    for (quality, count) in quality_distribution.iter() {
-        quality_sum += (*quality as usize) * count;
-        quality_count += count;
-    }
-
-    let quality_mean = quality_sum as f64 / quality_count as f64;
-
-    let mut quality_variance = 0;
-    for (quality, count) in quality_distribution.iter() {
-        quality_variance += (*quality as usize - quality_mean as usize).pow(2) * count;
-    }
-
+    
+    let quality_mean = average_read_qualities.iter().sum::<u8>() as f64 / average_read_qualities.len() as f64;
+    let quality_variance = average_read_qualities.iter().map(|x| (*x as f64 - quality_mean).powi(2)).sum::<f64>();
     let quality_sd = (quality_variance as f64 / quality_count as f64).sqrt();
 
     println!("Total reads: {}", total_reads);
     println!("Total length: {}", total_length);
     println!("GC content: {}", total_gc as f64 / total_length as f64);
     println!("N content: {}", total_n as f64 / total_length as f64);
-    println!("Length distribution: {:?}", length_distribution);
+    println!("Length min/max: {} / {}", read_min, read_max);
     println!("Mean: {}", mean);
     println!("Median: {}", median);
     println!("Quality mean: {}", quality_mean);
-    println!("Quality median: {}", quality_distribution.len() / 2);
+    println!("Quality median: {}", average_read_qualities[average_read_qualities.len() / 2]);
     println!("Quality s.d.: {}", quality_sd);
 }
 
