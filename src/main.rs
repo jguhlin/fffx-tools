@@ -367,8 +367,10 @@ fn fastq_stats(filename: &str) {
 
         *length_distribution.entry(seq.len()).or_insert(0) += 1;
 
-        for q in qual {
-            *quality_distribution.entry(q[0]).or_insert(0) += 1;
+        if let Some(qual) = qual {
+            for q in qual.iter() {
+                *quality_distribution.entry(*q - 33).or_insert(0) += 1;
+            }
         }
     }
 
