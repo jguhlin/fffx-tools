@@ -400,12 +400,12 @@ fn fastq_stats(filename: &str) {
 
     println!("Total reads: {}", total_reads);
     println!("Total length: {}", total_length);
-    println!("GC content: {}", total_gc as f64 / total_length as f64);
+    println!("GC content: {:.2}", total_gc as f64 / total_length as f64);
     println!("N content: {}", total_n as f64 / total_length as f64);
     println!("Length N50 min/max: {} -  {} / {}", n50, read_min, read_max);
-    println!("Mean: {}", mean);
+    println!("Mean: {:.2}", mean);
     println!("Median: {}", median);
-    println!("Quality mean (min/max): {} ({}/{})", quality_mean, read_qual_min, read_qual_max);
+    println!("Quality mean (min/max): {:.2} ({:.2}/{:.2})", quality_mean, read_qual_min, read_qual_max);
 }
 
 // about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
