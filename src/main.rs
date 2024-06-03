@@ -362,8 +362,8 @@ fn fastq_stats(filename: &str) {
 
         if let Some(qual) = qual {
             // Get average
-            let total_qual = qual.iter().map(|x| (*x - 33) as f64).sum::<f64>();
-            let average_qual = total_qual / qual.len() as f64;
+            let total_qual = qual.iter().map(|&x| x as f64).sum::<f64>();
+            let average_qual = (total_qual / qual.len() as f64) - 33.0;
             average_read_qualities.push(average_qual as u8);
         }
     }
@@ -377,12 +377,10 @@ fn fastq_stats(filename: &str) {
     let mean = total_length as f64 / total_reads as f64;
     let median = lengths[lengths.len() / 2];
 
-    let mut quality_sum = 0;
-    let mut quality_count = 0;
-    
+    let read_qual_min = average_read_qualities.iter().min().unwrap();
+    let read_qual_max = average_read_qualities.iter().max().unwrap();
+
     let quality_mean = average_read_qualities.iter().sum::<u8>() as f64 / average_read_qualities.len() as f64;
-    let quality_variance = average_read_qualities.iter().map(|x| (*x as f64 - quality_mean).powi(2)).sum::<f64>();
-    let quality_sd = (quality_variance as f64 / quality_count as f64).sqrt();
 
     println!("Total reads: {}", total_reads);
     println!("Total length: {}", total_length);
@@ -391,9 +389,7 @@ fn fastq_stats(filename: &str) {
     println!("Length min/max: {} / {}", read_min, read_max);
     println!("Mean: {}", mean);
     println!("Median: {}", median);
-    println!("Quality mean: {}", quality_mean);
-    println!("Quality median: {}", average_read_qualities[average_read_qualities.len() / 2]);
-    println!("Quality s.d.: {}", quality_sd);
+    println!("Quality mean (min/max): {} ({}/{})", quality_mean, read_qual_min, read_qual_max);
 }
 
 // about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
@@ -497,7 +493,15 @@ fn fasta_stats(filename: &str) {
 
     println!("Mean contig length: {}", mean_contig_length);
     println!("Mean scaffold length: {}", mean_scaffold_length);
+}
+
+#[cfg(test)]
+mod test {
+
+    #[test]
+    pub fn fastq_stats() {
+        let qual_string = b"-3331-,,,.22114568744.++++555:>?@AB<<AGHEA49?@AA?::(&&''(''((*---432+))'(-(*+*+,,,8776..-30/0112556677:2,,,++/58832334:<<;8::<=87998;>DCDA?@A><:66////.23327842:3**,,,,,))*('''(*./+((*14449200()))45-)))*6444**)))()((%$$$$%&&*',532222566.,---11137;;<>6-*))558::0.-+,0/+,::820..)&&&'68899<<<>>:EFH@DG=<886ABFD@9///>";
 
 
-
+    }
 }
