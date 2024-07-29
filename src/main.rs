@@ -22,6 +22,12 @@ enum Commands {
         output_base: String,
     },
 
+    #[command(about = "Reverses the sanitization process.")]
+    Desanitize {
+        file_base: String,
+        output: String,
+    },
+
     #[command(about = "Chunks a fasta file into smaller files. Useful for parallel processing.")]
     Chunk { filename: String, chunk_size: u64 },
 
@@ -81,6 +87,9 @@ fn main() {
             output_base,
         } => {
             sanitze(filename, output_base);
+        }
+        Commands::Desanitize { file_base, output } => {
+            desanitize(file_base, output);
         }
         Commands::Chunk {
             filename,
@@ -237,6 +246,45 @@ fn sanitze(filename: &str, output_base: &str) {
         output_translation_table
             .write(format!("{}\t{}\n", id, new_id).as_bytes())
             .expect("Unable to write data");
+    }
+}
+
+// todo untested
+fn desanitize(file_base: &str, output: &str) {
+    let mut reader = parse_fastx_file(&format!("{}.fasta", file_base)).expect("invalid path/file");
+
+    let mut translation_table: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+
+    let mut translation_table_reader =
+        std::fs::File::open(format!("{}.translation_table.tsv", file_base))
+            .expect("Unable to open translation table");
+    let mut translation_table_reader = std::io::BufReader::new(translation_table_reader);
+
+    for line in translation_table_reader.lines() {
+        let line = line.expect("Unable to read line");
+        let mut line = line.split('\t');
+        let id = line.next().unwrap();
+        let new_id = line.next().unwrap();
+        translation_table.insert(new_id.to_string(), id.to_string());
+    }
+
+    let mut output_fasta =
+        std::fs::File::create(format!("{}", output)).expect("Unable to create file");
+    let mut output_fasta = BufWriter::new(output_fasta);
+
+    while let Some(record) = reader.next() {
+        let record = record.expect("Invalid record");
+        let seq = record.normalize(false);
+        let id = from_utf8(record.id()).unwrap();
+
+        let new_id = translation_table.get(id).unwrap();
+
+        output_fasta
+            .write(format!(">{}\n", new_id).as_bytes())
+            .expect("Unable to write data");
+        output_fasta.write_all(&seq).expect("Unable to write data");
+        output_fasta.write(b"\n").expect("Unable to write data");
     }
 }
 
@@ -517,7 +565,5 @@ mod test {
     #[test]
     pub fn fastq_stats() {
         let qual_string = b"-3331-,,,.22114568744.++++555:>?@AB<<AGHEA49?@AA?::(&&''(''((*---432+))'(-(*+*+,,,8776..-30/0112556677:2,,,++/58832334:<<;8::<=87998;>DCDA?@A><:66////.23327842:3**,,,,,))*('''(*./+((*14449200()))45-)))*6444**)))()((%$$$$%&&*',532222566.,---11137;;<>6-*))558::0.-+,0/+,::820..)&&&'68899<<<>>:EFH@DG=<886ABFD@9///>";
-
-
     }
 }
