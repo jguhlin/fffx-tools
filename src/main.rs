@@ -197,6 +197,11 @@ fn remove_by_id_keyfile(filename: &str, output: &str, keyfile: &str) {
 }
 
 fn sanitze(filename: &str, output_base: &str) {
+
+    if &format!("{}.fasta", output_base) == filename {
+        panic!("Output file cannot be the same as the input file - Set base name to something else");
+    }
+
     let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
 
     let mut id_translation: Vec<(String, String)> = Vec::new();
@@ -251,6 +256,11 @@ fn sanitze(filename: &str, output_base: &str) {
 
 // todo untested
 fn desanitize(file_base: &str, output: &str) {
+
+    if &format!("{}.fasta", output) == file_base {
+        panic!("Output file cannot be the same as the input file - Set base name to something else");
+    }
+
     let mut reader = parse_fastx_file(&format!("{}.fasta", file_base)).expect("invalid path/file");
 
     let mut translation_table: std::collections::HashMap<String, String> =
@@ -581,6 +591,10 @@ mod test {
 
         assert_eq!(output_fasta, expected_fasta);
         assert_eq!(output_translation_table, expected_translation_table);
+
+        // Delete files
+        std::fs::remove_file(format!("{}.fasta", output_base)).unwrap();
+        std::fs::remove_file(format!("{}.translation_table.tsv", output_base)).unwrap();
 
     }
 
