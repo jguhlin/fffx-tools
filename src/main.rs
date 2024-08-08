@@ -197,6 +197,11 @@ fn remove_by_id_keyfile(filename: &str, output: &str, keyfile: &str) {
 }
 
 fn sanitze(filename: &str, output_base: &str) {
+
+    if &format!("{}.fasta", output_base) == filename {
+        panic!("Output file cannot be the same as the input file - Set base name to something else");
+    }
+
     let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
 
     let mut id_translation: Vec<(String, String)> = Vec::new();
@@ -251,6 +256,11 @@ fn sanitze(filename: &str, output_base: &str) {
 
 // todo untested
 fn desanitize(file_base: &str, output: &str) {
+
+    if &format!("{}.fasta", output) == file_base {
+        panic!("Output file cannot be the same as the input file - Set base name to something else");
+    }
+
     let mut reader = parse_fastx_file(&format!("{}.fasta", file_base)).expect("invalid path/file");
 
     let mut translation_table: std::collections::HashMap<String, String> =
@@ -562,8 +572,30 @@ fn fasta_stats(filename: &str) {
 #[cfg(test)]
 mod test {
 
+    // Test file
+    // test_data/test_input.fasta
+
     #[test]
-    pub fn fastq_stats() {
-        let qual_string = b"-3331-,,,.22114568744.++++555:>?@AB<<AGHEA49?@AA?::(&&''(''((*---432+))'(-(*+*+,,,8776..-30/0112556677:2,,,++/58832334:<<;8::<=87998;>DCDA?@A><:66////.23327842:3**,,,,,))*('''(*./+((*14449200()))45-)))*6444**)))()((%$$$$%&&*',532222566.,---11137;;<>6-*))558::0.-+,0/+,::820..)&&&'68899<<<>>:EFH@DG=<886ABFD@9///>";
+    fn test_sanitize() {
+        let filename = "test_data/test_input.fasta";
+        let output_base = "test_data/test/test_output";
+        super::sanitze(filename, output_base);
+
+        let output_fasta = std::fs::read_to_string(format!("{}.fasta", output_base)).unwrap();
+        let output_translation_table =
+            std::fs::read_to_string(format!("{}.translation_table.tsv", output_base)).unwrap();
+
+        let expected_fasta = std::fs::read_to_string("test_data/test_output.fasta").unwrap();
+        let expected_translation_table =
+            std::fs::read_to_string("test_data/test/test_output.translation_table.tsv").unwrap();
+
+        assert_eq!(output_fasta, expected_fasta);
+        assert_eq!(output_translation_table, expected_translation_table);
+
+        // Delete files
+        std::fs::remove_file(format!("{}.fasta", output_base)).unwrap();
+        std::fs::remove_file(format!("{}.translation_table.tsv", output_base)).unwrap();
+
     }
+
 }
