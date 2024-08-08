@@ -580,8 +580,12 @@ mod test {
     // Test file
     // test_data/test_input.fasta
 
+    use std::fs;
+
     #[test]
     fn test_sanitize() {
+
+        fs::create_dir("test_data/test").unwrap();
         let filename = "test_data/test_input.fasta";
         let output_base = "test_data/test/test_output";
         super::sanitze(filename, output_base);
