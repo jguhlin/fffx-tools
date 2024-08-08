@@ -23,10 +23,7 @@ enum Commands {
     },
 
     #[command(about = "Reverses the sanitization process.")]
-    Desanitize {
-        file_base: String,
-        output: String,
-    },
+    Desanitize { file_base: String, output: String },
 
     #[command(about = "Chunks a fasta file into smaller files. Useful for parallel processing.")]
     Chunk { filename: String, chunk_size: u64 },
@@ -65,15 +62,11 @@ enum Commands {
     #[command(
         about = "Compute FASTQ stats: number of reads, total length, GC content, N content, length distribution, mean, medium, s.d., of quality score."
     )]
-    FastqStats {
-        filename: String,
-    },
+    FastqStats { filename: String },
     #[command(
         about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
     )]
-    FastaStats {
-        filename: String,
-    },
+    FastaStats { filename: String },
 }
 
 fn main() {
@@ -197,9 +190,10 @@ fn remove_by_id_keyfile(filename: &str, output: &str, keyfile: &str) {
 }
 
 fn sanitze(filename: &str, output_base: &str) {
-
     if &format!("{}.fasta", output_base) == filename {
-        panic!("Output file cannot be the same as the input file - Set base name to something else");
+        panic!(
+            "Output file cannot be the same as the input file - Set base name to something else"
+        );
     }
 
     let mut reader = parse_fastx_file(&filename).expect("invalid path/file");
@@ -256,9 +250,10 @@ fn sanitze(filename: &str, output_base: &str) {
 
 // todo untested
 fn desanitize(file_base: &str, output: &str) {
-
     if &format!("{}.fasta", output) == file_base {
-        panic!("Output file cannot be the same as the input file - Set base name to something else");
+        panic!(
+            "Output file cannot be the same as the input file - Set base name to something else"
+        );
     }
 
     let mut reader = parse_fastx_file(&format!("{}.fasta", file_base)).expect("invalid path/file");
@@ -436,10 +431,17 @@ fn fastq_stats(filename: &str) {
     let median = lengths[lengths.len() / 2];
 
     // Stored as f64
-    let read_qual_min = *average_read_qualities.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
-    let read_qual_max = *average_read_qualities.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
-    
-    let quality_mean = average_read_qualities.iter().sum::<f64>() / average_read_qualities.len() as f64;
+    let read_qual_min = *average_read_qualities
+        .iter()
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let read_qual_max = *average_read_qualities
+        .iter()
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    let quality_mean =
+        average_read_qualities.iter().sum::<f64>() / average_read_qualities.len() as f64;
 
     // Calculate N50
     let mut total = 0;
@@ -463,7 +465,10 @@ fn fastq_stats(filename: &str) {
     println!("Length N50 min/max: {} -  {} / {}", n50, read_min, read_max);
     println!("Mean: {:.2}", mean);
     println!("Median: {}", median);
-    println!("Quality mean (min/max): {:.2} ({:.2}/{:.2})", quality_mean, read_qual_min, read_qual_max);
+    println!(
+        "Quality mean (min/max): {:.2} ({:.2}/{:.2})",
+        quality_mean, read_qual_min, read_qual_max
+    );
 }
 
 // about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
@@ -476,14 +481,14 @@ fn fasta_stats(filename: &str) {
     let mut total_reads = 0;
     let mut length_distribution: std::collections::HashMap<usize, usize> =
         std::collections::HashMap::new();
-    
+
     // Calculate N50, N90, etc.
     let mut lengths: Vec<usize> = Vec::new();
 
     // Calculate Per contig and Per Scaffold stats
     let mut contig_lengths: Vec<usize> = Vec::new();
     let mut scaffold_lengths: Vec<usize> = Vec::new();
-    
+
     while let Some(record) = reader.next() {
         let record = record.expect("Invalid record");
         let seq = record.seq();
@@ -595,7 +600,5 @@ mod test {
         // Delete files
         std::fs::remove_file(format!("{}.fasta", output_base)).unwrap();
         std::fs::remove_file(format!("{}.translation_table.tsv", output_base)).unwrap();
-
     }
-
 }
