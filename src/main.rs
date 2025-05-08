@@ -577,7 +577,7 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
             filename: file.to_string(),
             entries: total_landmarks,
             length: total_length,
-            gc: total_gc as f32 / total_length as f32,
+            gc: total_gc as f32 / (total_length as f32 - total_n as f32),
             n: total_n,
             n50,
             n90,
