@@ -489,7 +489,7 @@ struct FastaStats {
 fn fasta_stats(header: bool, filenames: &Vec<String>) {
     // Let's print it out as a TSV entry
     if header {
-        println!("Entries\tLength\tGC\tN\tN50\tN90\tMean contig\tMean scaffold");
+        println!("Filename\tEntries\tLength\tGC\tN\tN50\tN90\tMean contig\tMean scaffold");
     }
 
     let scaffold_finder = Finder::new(&[b'N'; 10]);  // build once
@@ -588,7 +588,8 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
 
     for stat in stats {
         println!(
-            "{}\t{}\t{:.2}\t{}\t{}\t{}\t{:.2}\t{:.2}",
+            "{}\t{}\t{}\t{:.2}\t{}\t{}\t{}\t{:.2}\t{:.2}",
+            stat.filename,
             stat.entries,
             stat.length,
             stat.gc,
