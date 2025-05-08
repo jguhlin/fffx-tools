@@ -516,7 +516,7 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
             total_landmarks += 1;
             total_length += seq.len();
 
-            let gc = count(seq.as_ref(), b'G') + count(seq.as_ref(), b'C');
+            let gc = count(seq.as_ref(), b'G') + count(seq.as_ref(), b'C') + count(seq.as_ref(), b'g') + count(seq.as_ref(), b'c');
             let n = count(seq.as_ref(), b'N');
     
             total_gc += gc;
