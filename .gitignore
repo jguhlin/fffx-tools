@@ -14,3 +14,10 @@ Cargo.lock
 *.pdb
 
 test_data/test/*
+
+*.fasta
+*.fna
+*.fa
+*.fastq
+*.fq
+*.gz
