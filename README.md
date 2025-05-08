@@ -13,7 +13,5 @@ cp target/release/fffx-tools ~/bin
 ```
 Or copy it wherever you'd like.
 
-
-
 ## Pronunciation
 f3tools

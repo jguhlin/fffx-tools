@@ -408,8 +408,8 @@ fn fastq_stats(filename: &str) {
 
         lengths.push(seq.len());
 
-        let gc = count(seq.as_ref(), b'G') + count(seq.as_ref(), b'C');
-        let n = count(seq.as_ref(), b'N');
+        let gc = count(seq.as_ref(), b'G') + count(seq.as_ref(), b'C') + count(seq.as_ref(), b'g') + count(seq.as_ref(), b'c');
+        let n = count(seq.as_ref(), b'N') + count(seq.as_ref(), b'n');
 
         total_gc += gc;
         total_n += n;
