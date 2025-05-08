@@ -10,6 +10,8 @@ name ="fffx"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.5.4", features = ["derive"] }
-needletail = "0.5.1"
-simdutf8 = "0.1.4"
+clap = { version = "4.5.37", features = ["derive"] }
+needletail = "0.6.3"
+pulp = "0.21.5"
+rayon = "1.10.0"
+simdutf8 = "0.1.5"
