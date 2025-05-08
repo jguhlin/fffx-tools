@@ -4,6 +4,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use needletail::{parse_fastx_file, FastxReader, Sequence};
 use simdutf8::basic::from_utf8;
 use rayon::prelude::*;
+use bytecount::count;
+use memchr::memmem::Finder;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -406,15 +408,8 @@ fn fastq_stats(filename: &str) {
 
         lengths.push(seq.len());
 
-        let mut gc = 0;
-        let mut n = 0;
-        for base in seq.iter() {
-            match base {
-                b'G' | b'C' => gc += 1,
-                b'N' => n += 1,
-                _ => (),
-            }
-        }
+        let gc = count(seq.as_ref(), b'G') + count(seq.as_ref(), b'C');
+        let n = count(seq.as_ref(), b'N');
 
         total_gc += gc;
         total_n += n;
@@ -497,10 +492,10 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
         println!("Entries\tLength\tGC\tN\tN50\tN90\tMean contig\tMean scaffold");
     }
 
-    let arch = pulp::Arch::new();
-
     // Calc time this takes
     let start = std::time::Instant::now();
+
+    let scaffold_finder = Finder::new(&[b'N'; 10]);  // build once
 
     let stats: Vec<FastaStats> = filenames.par_iter().map(|file| {
         let mut reader = parse_fastx_file(&file).expect("invalid path/file");
@@ -509,7 +504,6 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
         let mut total_gc = 0;
         let mut total_n = 0;
         let mut total_landmarks = 0;
-        let mut length_distribution: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
 
         // Calculate N50, N90, etc.
         let mut lengths: Vec<usize> = Vec::new();
@@ -525,37 +519,27 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
             total_landmarks += 1;
             total_length += seq.len();
 
-            let mut gc = 0;
-            let mut n = 0;
-            arch.dispatch(|| {
-                for base in seq.iter() {
-                    match base {
-                        b'G' | b'C' => gc += 1,
-                        b'N' => n += 1,
-                        _ => (),
-                    }
-                }
-            });
-
+            let gc = count(seq.as_ref(), b'G') + count(seq.as_ref(), b'C');
+            let n = count(seq.as_ref(), b'N');
+    
             total_gc += gc;
             total_n += n;
-
-            *length_distribution.entry(seq.len()).or_insert(0) += 1;
 
             lengths.push(seq.len());
 
             // Scaffolds have at least one gap that is represented by a N
             // and that gap is 10bp long
             // todo fix this
-            if seq.contains(&b'N') {
-                scaffold_lengths.push(seq.len());
+            
+            if scaffold_finder.find(seq.as_ref()).is_some() {
+                scaffold_lengths.push(seq.len()); // Changed from len to seq.len()
             } else {
-                contig_lengths.push(seq.len());
+                contig_lengths.push(seq.len()); // Changed from len to seq.len()
             }
         }
 
         // Calculate N50, N90, etc.
-        lengths.sort();
+        lengths.sort_unstable();
         let mut total = 0;
         let mut n50 = 0;
         let mut n90 = 0;

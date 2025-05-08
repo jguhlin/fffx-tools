@@ -10,7 +10,9 @@ name ="fffx"
 path = "src/main.rs"
 
 [dependencies]
+bytecount = { version = "0.6.8", features = ["runtime-dispatch-simd"] }
 clap = { version = "4.5.37", features = ["derive"] }
+memchr = "2.7.4"
 needletail = "0.6.3"
 pulp = "0.21.5"
 rayon = "1.10.0"
