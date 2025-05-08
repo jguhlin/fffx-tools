@@ -477,12 +477,12 @@ struct FastaStats {
     filename: String,
     entries: usize,
     length: usize,
-    gc: f32,
+    gc: f64,
     n: usize,
     n50: usize,
     n90: usize,
-    mean_contig: f32,
-    mean_scaffold: f32,
+    mean_contig: f64,
+    mean_scaffold: f64,
 }
 
 // about = "Compute FASTA stats: number of reads, total length, GC content, N content, length distribution."
@@ -499,6 +499,7 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
 
         let mut total_length = 0;
         let mut total_gc = 0;
+        let mut total_at = 0;
         let mut total_n = 0;
         let mut total_landmarks = 0;
 
@@ -517,9 +518,11 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
             total_length += seq.len();
 
             let gc = count(seq.as_ref(), b'G') + count(seq.as_ref(), b'C') + count(seq.as_ref(), b'g') + count(seq.as_ref(), b'c');
-            let n = count(seq.as_ref(), b'N');
+            let n = count(seq.as_ref(), b'N') + count(seq.as_ref(), b'n');
+            let at = count(seq.as_ref(), b'A') + count(seq.as_ref(), b'T') + count(seq.as_ref(), b'a') + count(seq.as_ref(), b't');
     
             total_gc += gc;
+            total_at += at;
             total_n += n;
 
             lengths.push(seq.len());
@@ -577,12 +580,12 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
             filename: file.to_string(),
             entries: total_landmarks,
             length: total_length,
-            gc: total_gc as f32 / (total_length as f32 - total_n as f32),
+            gc: (total_gc as f64 / (total_at + total_gc) as f64) * 100.0,
             n: total_n,
             n50,
             n90,
-            mean_contig: mean_contig_length as f32,
-            mean_scaffold: mean_scaffold_length as f32,
+            mean_contig: mean_contig_length as f64,
+            mean_scaffold: mean_scaffold_length as f64,
         }
     }).collect();
 
