@@ -492,9 +492,6 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
         println!("Entries\tLength\tGC\tN\tN50\tN90\tMean contig\tMean scaffold");
     }
 
-    // Calc time this takes
-    let start = std::time::Instant::now();
-
     let scaffold_finder = Finder::new(&[b'N'; 10]);  // build once
 
     let stats: Vec<FastaStats> = filenames.par_iter().map(|file| {
@@ -588,9 +585,6 @@ fn fasta_stats(header: bool, filenames: &Vec<String>) {
             mean_scaffold: mean_scaffold_length as f32,
         }
     }).collect();
-
-    let elapsed = start.elapsed();
-    println!("Elapsed time: {:?}", elapsed);
 
     for stat in stats {
         println!(
