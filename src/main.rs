@@ -87,7 +87,7 @@ fn main() {
             filename,
             output_base,
         } => {
-            sanitze(filename, output_base);
+            sanitize(filename, output_base);
         }
         Commands::Desanitize { file_base, output } => {
             desanitize(file_base, output);
@@ -197,7 +197,7 @@ fn remove_by_id_keyfile(filename: &str, output: &str, keyfile: &str) {
     }
 }
 
-fn sanitze(filename: &str, output_base: &str) {
+fn sanitize(filename: &str, output_base: &str) {
     if &format!("{}.fasta", output_base) == filename {
         panic!(
             "Output file cannot be the same as the input file - Set base name to something else"
@@ -620,7 +620,7 @@ mod test {
         fs::create_dir("test_data/test").unwrap();
         let filename = "test_data/test_input.fasta";
         let output_base = "test_data/test/test_output";
-        super::sanitze(filename, output_base);
+        super::sanitize(filename, output_base);
 
         let output_fasta = std::fs::read_to_string(format!("{}.fasta", output_base)).unwrap();
         let output_translation_table =
